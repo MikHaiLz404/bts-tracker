@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse, Response
 from postgres_store import PostgresStore
 from my_server import MyChatKitServer  # import your custom server class
 from request_context import RequestContext
@@ -91,8 +91,36 @@ async def chatkit_endpoint(request: Request):
         # Process the request through ChatKit server
         print(f"Processing request through ChatKit server...")
         result = await server.process(body, context)
-        print(f"Request processed successfully, returning result")
-        return result
+        print(f"Request processed successfully, result type: {type(result).__name__}")
+
+        # Handle streaming vs non-streaming responses
+        if hasattr(result, 'json_events'):
+            # Streaming response (threads.create, threads.add_user_message, etc.)
+            print("Returning streaming response")
+            return StreamingResponse(
+                result.json_events,
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                }
+            )
+        elif hasattr(result, 'json'):
+            # Non-streaming response (threads.list, threads.get_by_id, etc.)
+            print("Returning non-streaming response")
+            return Response(
+                content=result.json,
+                media_type="application/json"
+            )
+        else:
+            print(f"ERROR: Unknown result type: {type(result)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "Internal server error",
+                    "message": f"Unknown result type: {type(result).__name__}"
+                }
+            )
 
     except ValidationError as e:
         return JSONResponse(
