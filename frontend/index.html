@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTS Tracker - AI Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🐛 BTS Tracker</h1>
+                <p class="subtitle">AI-Powered Bug Tracking Assistant</p>
+            </div>
+            <div class="header-actions">
+                <button id="newThreadBtn" class="btn btn-secondary">
+                    <span>➕</span> New Chat
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>Conversations</h2>
+                </div>
+                <div id="threadList" class="thread-list">
+                    <!-- Threads will be loaded here -->
+                    <div class="empty-state">
+                        <p>No conversations yet</p>
+                        <p class="empty-hint">Start a new chat to begin</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Chat Area -->
+            <main class="chat-container">
+                <!-- Welcome Screen -->
+                <div id="welcomeScreen" class="welcome-screen">
+                    <div class="welcome-content">
+                        <div class="welcome-icon">🤖</div>
+                        <h2>Welcome to BTS Tracker</h2>
+                        <p>Your AI assistant for bug tracking and task management</p>
+                        <div class="sample-prompts">
+                            <h3>Try asking:</h3>
+                            <button class="sample-prompt" data-prompt="What is BTS Tracker and how can you help me?">
+                                💬 What is BTS Tracker?
+                            </button>
+                            <button class="sample-prompt" data-prompt="How do I create a new bug ticket?">
+                                🐛 How do I create a bug ticket?
+                            </button>
+                            <button class="sample-prompt" data-prompt="Show me my open tasks">
+                                📋 Show my open tasks
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div id="chatMessages" class="chat-messages" style="display: none;">
+                    <!-- Messages will be added here -->
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea
+                            id="messageInput"
+                            placeholder="Ask me anything about bug tracking..."
+                            rows="1"
+                        ></textarea>
+                        <button id="sendBtn" class="btn btn-primary">
+                            <span id="sendBtnText">Send</span>
+                            <span id="sendBtnLoader" class="loader" style="display: none;"></span>
+                        </button>
+                    </div>
+                    <div class="input-hint">
+                        Press <kbd>Enter</kbd> to send, <kbd>Shift+Enter</kbd> for new line
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Status Bar -->
+        <div id="statusBar" class="status-bar">
+            <span id="statusText">Ready</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

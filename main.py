@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
 from postgres_store import PostgresStore
 from my_server import MyChatKitServer  # import your custom server class
 from request_context import RequestContext
@@ -7,6 +8,15 @@ from pydantic import ValidationError
 import json
 
 app = FastAPI()
+
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict this to your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize store and server
 try:
