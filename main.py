@@ -24,6 +24,7 @@ async def health_check():
 
 @app.post("/chatkit")
 async def chatkit_endpoint(request: Request):
+    print(f"=== Received ChatKit request ===")
     try:
         # Get the raw body
         body = await request.body()
@@ -72,9 +73,12 @@ async def chatkit_endpoint(request: Request):
         # You can get user_id from JWT token, session, or other auth mechanism
         user_id = request.headers.get("X-User-ID", "default-user")
         context = RequestContext(user_id=user_id)
+        print(f"Created context with user_id: {user_id}")
 
         # Process the request through ChatKit server
+        print(f"Processing request through ChatKit server...")
         result = await server.process(body, context)
+        print(f"Request processed successfully, returning result")
         return result
 
     except ValidationError as e:
