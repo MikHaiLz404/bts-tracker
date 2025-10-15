@@ -1,7 +1,7 @@
 import os
 from typing import Any, AsyncIterator
 
-from agents import Agent
+from agents import Agent, Runner
 from chatkit.agents import AgentContext, stream_agent_response, ThreadItemConverter
 from chatkit.server import ChatKitServer
 from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent
@@ -20,18 +20,22 @@ class MyChatKitServer(ChatKitServer):
         super().__init__(store)
 
         # Initialize the AI agent
-        # You can customize the system prompt and model here
+        # You can customize the instructions and model here
+        model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        instructions = self._get_instructions()
+
         self.agent = Agent(
-            model=os.getenv("OPENAI_MODEL", "gpt-4o"),
-            system_prompt=self._get_system_prompt(),
+            name="BTS Tracker Assistant",
+            model=model,
+            instructions=instructions,
         )
 
         # Thread item converter for transforming ChatKit items to agent input
         self.converter = ThreadItemConverter()
 
-    def _get_system_prompt(self) -> str:
+    def _get_instructions(self) -> str:
         """
-        Define your agent's system prompt here.
+        Define your agent's instructions here.
         Customize this to match your BTS Tracker use case.
         """
         return """You are a helpful AI assistant for the BTS Tracker system.
@@ -86,7 +90,8 @@ Be concise, helpful, and professional in your responses."""
             agent_input.extend(new_input)
 
         # Run the agent and stream responses
-        result = self.agent.run_stream(
+        result = Runner.run_streamed(
+            self.agent,
             input=agent_input,
             # You can add additional parameters here:
             # temperature=0.7,
