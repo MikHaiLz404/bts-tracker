@@ -38,22 +38,23 @@ async def chatkit_endpoint(request: Request):
                     content={
                         "error": "Invalid request format",
                         "message": "Request must be a JSON object with a 'type' field",
-                        "details": "Expected format: {\"type\": \"threads/create\", \"params\": {...}}",
+                        "details": "Expected format: {\"type\": \"threads.create\", \"params\": {...}}",
                         "valid_types": [
-                            "threads/create",
-                            "threads/add_user_message",
-                            "threads/add_client_tool_output",
-                            "threads/retry_after_item",
-                            "threads/custom_action",
-                            "threads/get_by_id",
-                            "threads/list",
-                            "items/list",
-                            "items/feedback",
-                            "attachments/create",
-                            "attachments/delete",
-                            "threads/update",
-                            "threads/delete"
-                        ]
+                            "threads.create",
+                            "threads.add_user_message",
+                            "threads.add_client_tool_output",
+                            "threads.retry_after_item",
+                            "threads.custom_action",
+                            "threads.get_by_id",
+                            "threads.list",
+                            "items.list",
+                            "items.feedback",
+                            "attachments.create",
+                            "attachments.delete",
+                            "threads.update",
+                            "threads.delete"
+                        ],
+                        "note": "Use dots (.) not slashes (/) in type names"
                     }
                 )
         except json.JSONDecodeError:
