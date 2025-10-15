@@ -1,7 +1,15 @@
 from chatkit.server import ChatKitServer
 from postgres_store import PostgresStore  # or your preferred Store
-from chatkit.types import ThreadMetadata, UserMessageItem, ThreadStreamEvent
+from chatkit.types import (
+    ThreadMetadata,
+    UserMessageItem,
+    ThreadStreamEvent,
+    AssistantMessageItem,
+    AssistantMessageContent,
+    ThreadItemDoneEvent
+)
 from typing import Any, AsyncIterator
+from datetime import datetime
 
 class MyChatKitServer(ChatKitServer):
     async def respond(
@@ -11,18 +19,31 @@ class MyChatKitServer(ChatKitServer):
         context: Any,
     ) -> AsyncIterator[ThreadStreamEvent]:
         # Simple echo implementation as a placeholder
-        from chatkit.types import AssistantMessageItem, ThreadItemDoneEvent
-        import datetime
 
-        # Yield a simple assistant response for demonstration
-        yield AssistantMessageItem(
-            id="assistant-echo-1",
+        # Get the user's message text
+        user_text = ""
+        if input_user_message and input_user_message.content:
+            for content_item in input_user_message.content:
+                if hasattr(content_item, 'text'):
+                    user_text = content_item.text
+                    break
+
+        # Create response message
+        response_text = f"Echo: {user_text}" if user_text else "Hello! I'm your BTS Tracker assistant."
+
+        # Create the assistant message item with proper structure
+        assistant_item = AssistantMessageItem(
+            id=self.store.generate_item_id("message", thread, context),
             thread_id=thread.id,
-            created_at=datetime.datetime.now(),
-            content=[f"Echo: {input_user_message.content[0]}"] if input_user_message else ["Hello!"],
+            created_at=datetime.now(),
+            content=[
+                AssistantMessageContent(
+                    type="output_text",
+                    text=response_text,
+                    annotations=[]
+                )
+            ],
         )
-        yield ThreadItemDoneEvent(
-            thread_id=thread.id,
-            created_at=datetime.datetime.now(),
-            item_id="assistant-echo-1",
-        )
+
+        # Yield the completed item
+        yield ThreadItemDoneEvent(item=assistant_item)

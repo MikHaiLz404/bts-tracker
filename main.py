@@ -81,11 +81,16 @@ async def chatkit_endpoint(request: Request):
         )
     except Exception as e:
         # Log the error (in production, use proper logging)
+        import traceback
+        error_trace = traceback.format_exc()
         print(f"Error processing ChatKit request: {str(e)}")
+        print(f"Full traceback:\n{error_trace}")
         return JSONResponse(
             status_code=500,
             content={
                 "error": "Internal server error",
-                "message": "An error occurred while processing your request. Please check the request format and try again."
+                "message": str(e),
+                "type": type(e).__name__,
+                "traceback": error_trace.split('\n')[-10:]  # Last 10 lines of traceback
             }
         )
