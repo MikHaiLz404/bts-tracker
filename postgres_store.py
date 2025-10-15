@@ -124,7 +124,7 @@ class PostgresStore(Store[RequestContext]):
                     """,
                     (
                         thread.id,
-                        thread.user_id,
+                        context.user_id,
                         thread.created_at,
                         Json(
                             ThreadData(thread=thread).model_dump(
@@ -267,59 +267,74 @@ class PostgresStore(Store[RequestContext]):
             conn.commit()
 
     async def load_thread_items(
-        self, thread_id: str, context: RequestContext, limit: int = 50, before: str | None = None
+        self, thread_id: str, after: str | None, limit: int, order: str, context: RequestContext
     ) -> Page[ThreadItem]:
         with self._connection() as conn:
             with conn.cursor(row_factory=tuple_row) as cur:
-                # Pagination support if needed (using created_at).
-                if before:
+                # Pagination support
+                order_clause = "ASC" if order == "asc" else "DESC"
+
+                if after:
                     cur.execute(
-                        """
+                        f"""
                         SELECT data FROM items
-                        WHERE thread_id = %s AND user_id = %s AND id < %s
-                        ORDER BY created_at DESC LIMIT %s
+                        WHERE thread_id = %s AND user_id = %s AND id > %s
+                        ORDER BY created_at {order_clause} LIMIT %s
                         """,
-                        (thread_id, context.user_id, before, limit)
+                        (thread_id, context.user_id, after, limit + 1)
                     )
                 else:
                     cur.execute(
-                        """
+                        f"""
                         SELECT data FROM items
                         WHERE thread_id = %s AND user_id = %s
-                        ORDER BY created_at DESC LIMIT %s
+                        ORDER BY created_at {order_clause} LIMIT %s
                         """,
-                        (thread_id, context.user_id, limit)
+                        (thread_id, context.user_id, limit + 1)
                     )
                 rows = cur.fetchall()
-                items = [ThreadItem.model_validate(row[0]['item']) for row in rows]
-                # For production, implement `Page` correctly. Minimal example:
-                next_cursor = items[-1].id if items else None
-                return Page(items=items, next_cursor=next_cursor)
+                items = [ItemData.model_validate(row[0]).item for row in rows]
+
+                # Check if there are more items
+                has_more = len(items) > limit
+                if has_more:
+                    items = items[:limit]
+
+                next_cursor = items[-1].id if items and has_more else None
+                return Page(data=items, has_more=has_more, after=next_cursor)
 
     async def load_threads(
-        self, context: RequestContext, limit: int = 50, before: str | None = None
+        self, limit: int, after: str | None, order: str, context: RequestContext
     ) -> Page[ThreadMetadata]:
         with self._connection() as conn:
             with conn.cursor(row_factory=tuple_row) as cur:
-                if before:
+                order_clause = "ASC" if order == "asc" else "DESC"
+
+                if after:
                     cur.execute(
-                        """
+                        f"""
                         SELECT data FROM threads
-                        WHERE user_id = %s AND id < %s
-                        ORDER BY created_at DESC LIMIT %s
+                        WHERE user_id = %s AND id > %s
+                        ORDER BY created_at {order_clause} LIMIT %s
                         """,
-                        (context.user_id, before, limit)
+                        (context.user_id, after, limit + 1)
                     )
                 else:
                     cur.execute(
-                        """
+                        f"""
                         SELECT data FROM threads
                         WHERE user_id = %s
-                        ORDER BY created_at DESC LIMIT %s
+                        ORDER BY created_at {order_clause} LIMIT %s
                         """,
-                        (context.user_id, limit)
+                        (context.user_id, limit + 1)
                     )
                 rows = cur.fetchall()
-                threads = [ThreadMetadata.model_validate(row[0]['thread']) for row in rows]
-                next_cursor = threads[-1].id if threads else None
-                return Page(items=threads, next_cursor=next_cursor)
+                threads = [ThreadData.model_validate(row[0]).thread for row in rows]
+
+                # Check if there are more threads
+                has_more = len(threads) > limit
+                if has_more:
+                    threads = threads[:limit]
+
+                next_cursor = threads[-1].id if threads and has_more else None
+                return Page(data=threads, has_more=has_more, after=next_cursor)

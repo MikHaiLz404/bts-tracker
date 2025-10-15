@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from postgres_store import PostgresStore
 from my_server import MyChatKitServer  # import your custom server class
+from request_context import RequestContext
 from pydantic import ValidationError
 import json
 
@@ -66,8 +67,14 @@ async def chatkit_endpoint(request: Request):
                 }
             )
 
+        # Create a request context
+        # For now, use a default user_id. In production, extract from auth headers
+        # You can get user_id from JWT token, session, or other auth mechanism
+        user_id = request.headers.get("X-User-ID", "default-user")
+        context = RequestContext(user_id=user_id)
+
         # Process the request through ChatKit server
-        result = await server.process(body, {})
+        result = await server.process(body, context)
         return result
 
     except ValidationError as e:
