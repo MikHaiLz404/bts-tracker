@@ -7,8 +7,21 @@ from pydantic import ValidationError
 import json
 
 app = FastAPI()
-store = PostgresStore()  # This will read DATABASE_URL and connect
-server = MyChatKitServer(store)
+
+# Initialize store and server
+try:
+    print("Initializing PostgresStore...")
+    store = PostgresStore()
+    print("PostgresStore initialized successfully")
+
+    print("Initializing MyChatKitServer...")
+    server = MyChatKitServer(store)
+    print("MyChatKitServer initialized successfully")
+except Exception as e:
+    print(f"FATAL ERROR during initialization: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 @app.get("/")
 async def health_check():
