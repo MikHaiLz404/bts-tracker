@@ -79,21 +79,22 @@
     <script
         src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
         async
+        onload="console.log('✅ ChatKit SDK script loaded')"
+        onerror="console.error('❌ Failed to load ChatKit SDK from CDN')"
     ></script>
 
     <script type="module">
         // Use relative URL - works for both local and production
         const API_URL = '/api/chatkit/session';
 
-        async function getClientSecret() {
+        async function getClientToken() {
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    // Optional: pass user ID
-                    // body: JSON.stringify({ user_id: 'some-user-id' })
+                    body: JSON.stringify({ user_id: 'default-user' })
                 });
 
                 if (!response.ok) {
@@ -109,39 +110,47 @@
                 return data.client_secret;
 
             } catch (error) {
-                console.error('Error fetching client secret:', error);
+                console.error('Error fetching client token:', error);
                 throw error;
             }
         }
 
         async function initializeChatKit() {
             try {
-                console.log('Waiting for ChatKit SDK to load...');
+                console.log('Waiting for ChatKit Web Component to load...');
 
-                // Wait for ChatKit SDK to be available
-                while (typeof window.OpenAI === 'undefined' || !window.OpenAI.ChatKit) {
+                // Wait for custom element to be defined (with timeout)
+                let attempts = 0;
+                const maxAttempts = 100; // 10 seconds timeout
+
+                while (typeof customElements === 'undefined' || !customElements.get('openai-chatkit')) {
+                    if (attempts >= maxAttempts) {
+                        throw new Error('ChatKit Web Component failed to load after 10 seconds.');
+                    }
                     await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
                 }
 
-                console.log('ChatKit SDK loaded, fetching session...');
+                console.log('ChatKit Web Component loaded successfully!');
 
-                // Get client secret
-                const clientSecret = await getClientSecret();
+                // Get client token
+                const clientToken = await getClientToken();
+                console.log('Got client token, initializing ChatKit UI...');
 
-                console.log('Got client secret, initializing ChatKit UI...');
-
-                // Initialize ChatKit with the official API
+                // Create and configure the openai-chatkit web component
                 const container = document.getElementById('chatkit-container');
                 container.innerHTML = ''; // Clear loading message
 
-                const chatkit = await window.OpenAI.ChatKit.create({
-                    clientSecret: clientSecret,
-                    container: container,
-                    // Optional: Add custom theme
-                    // theme: {
-                    //     primaryColor: '#2563eb',
-                    // }
+                const chatkit = document.createElement('openai-chatkit');
+                chatkit.setOptions({
+                    api: { clientToken }
                 });
+
+                // Style the component
+                chatkit.style.width = '100%';
+                chatkit.style.height = '100%';
+
+                container.appendChild(chatkit);
 
                 console.log('ChatKit initialized successfully!');
 

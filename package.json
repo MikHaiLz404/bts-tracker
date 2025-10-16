@@ -1,0 +1,16 @@
+{
+  "name": "bts-tracker",
+  "version": "1.0.0",
+  "description": "This project is licensed under the [Apache License 2.0](LICENSE).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

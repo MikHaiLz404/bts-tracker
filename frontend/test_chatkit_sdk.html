@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatKit SDK Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 2rem;
+            background: #f0f0f0;
+        }
+        .log {
+            background: white;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>ChatKit SDK Loading Test</h1>
+    <div id="logs"></div>
+
+    <script>
+        const logs = document.getElementById('logs');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toISOString()}] ${message}`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        log('Starting ChatKit SDK test...', 'info');
+        log('window.OpenAI exists: ' + (typeof window.OpenAI !== 'undefined'), 'info');
+
+        // Test 1: Try loading from CDN
+        log('Test 1: Loading from CDN...', 'info');
+        const script = document.createElement('script');
+        script.src = 'https://cdn.platform.openai.com/deployments/chatkit/chatkit.js';
+        script.async = true;
+
+        script.onload = function() {
+            log('✅ Script tag loaded successfully', 'success');
+            log('window.OpenAI exists: ' + (typeof window.OpenAI !== 'undefined'), 'info');
+            log('window.OpenAI value: ' + JSON.stringify(window.OpenAI), 'info');
+
+            if (window.OpenAI && window.OpenAI.ChatKit) {
+                log('✅ ChatKit is available!', 'success');
+                log('ChatKit methods: ' + Object.keys(window.OpenAI.ChatKit).join(', '), 'info');
+            } else {
+                log('❌ ChatKit is NOT available after script load', 'error');
+                log('Available window.OpenAI properties: ' + (window.OpenAI ? Object.keys(window.OpenAI).join(', ') : 'N/A'), 'info');
+            }
+        };
+
+        script.onerror = function(error) {
+            log('❌ Failed to load script from CDN', 'error');
+            log('Error: ' + error.toString(), 'error');
+            log('This likely means the CDN URL is incorrect or the SDK is not publicly available', 'error');
+        };
+
+        document.head.appendChild(script);
+
+        // Test 2: Check after 5 seconds
+        setTimeout(() => {
+            log('Test 2: Checking after 5 seconds...', 'info');
+            log('window.OpenAI exists: ' + (typeof window.OpenAI !== 'undefined'), 'info');
+            if (window.OpenAI) {
+                log('window.OpenAI keys: ' + Object.keys(window.OpenAI).join(', '), 'info');
+            }
+        }, 5000);
+
+        // Test 3: Try alternative module loading
+        setTimeout(async () => {
+            log('Test 3: Checking if it needs to be imported as ES module...', 'info');
+            try {
+                // Some SDKs export as ES modules
+                const module = await import('https://cdn.platform.openai.com/deployments/chatkit/chatkit.js');
+                log('✅ Module loaded via import()', 'success');
+                log('Module exports: ' + Object.keys(module).join(', '), 'info');
+            } catch (e) {
+                log('❌ Cannot load as ES module: ' + e.message, 'error');
+            }
+        }, 6000);
+
+        // Listen for any global errors
+        window.addEventListener('error', (event) => {
+            log('Global error: ' + event.message, 'error');
+        });
+    </script>
+</body>
+</html>

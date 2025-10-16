@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatKit Web Component Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 2rem;
+            background: #f0f0f0;
+        }
+        .log {
+            background: white;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>ChatKit Web Component Test</h1>
+    <div id="logs"></div>
+
+    <script
+        src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+        async
+        onload="console.log('✅ Script loaded')"
+        onerror="console.error('❌ Script failed to load')"
+    ></script>
+
+    <script>
+        const logs = document.getElementById('logs');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toISOString()}] ${message}`;
+            logs.appendChild(div);
+            console.log(message);
+        }
+
+        log('Starting Web Component test...', 'info');
+
+        async function testWebComponent() {
+            try {
+                log('Waiting for customElements to be available...', 'info');
+
+                // Wait for custom element to be defined
+                let attempts = 0;
+                const maxAttempts = 100;
+
+                while (typeof customElements === 'undefined' || !customElements.get('openai-chatkit')) {
+                    if (attempts >= maxAttempts) {
+                        throw new Error('Web Component not defined after 10 seconds');
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+
+                log('✅ openai-chatkit Web Component is defined!', 'success');
+                log('Attempts: ' + attempts, 'info');
+
+                // Test creating the element
+                const chatkit = document.createElement('openai-chatkit');
+                log('✅ Successfully created <openai-chatkit> element', 'success');
+
+                // Check methods
+                if (typeof chatkit.setOptions === 'function') {
+                    log('✅ setOptions method is available', 'success');
+                } else {
+                    log('❌ setOptions method is NOT available', 'error');
+                }
+
+                // List all available methods and properties
+                const props = Object.getOwnPropertyNames(Object.getPrototypeOf(chatkit));
+                log('Available methods: ' + props.filter(p => typeof chatkit[p] === 'function').join(', '), 'info');
+
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Start test after script loads
+        window.addEventListener('load', () => {
+            setTimeout(testWebComponent, 1000);
+        });
+    </script>
+</body>
+</html>
