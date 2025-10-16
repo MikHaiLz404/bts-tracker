@@ -133,17 +133,30 @@
 
                 console.log('ChatKit Web Component loaded successfully!');
 
-                // Get client token
-                const clientToken = await getClientToken();
-                console.log('Got client token, initializing ChatKit UI...');
-
                 // Create and configure the openai-chatkit web component
                 const container = document.getElementById('chatkit-container');
                 container.innerHTML = ''; // Clear loading message
 
                 const chatkit = document.createElement('openai-chatkit');
+
+                // Configure with getClientSecret function (not direct token)
                 chatkit.setOptions({
-                    api: { clientToken }
+                    api: {
+                        async getClientSecret(currentClientSecret) {
+                            // If no current token, get a new one
+                            if (!currentClientSecret) {
+                                console.log('Getting initial client secret...');
+                                const clientSecret = await getClientToken();
+                                console.log('Got client secret successfully!');
+                                return clientSecret;
+                            }
+
+                            // Token refresh logic (if needed in the future)
+                            console.log('Refreshing client secret...');
+                            const clientSecret = await getClientToken();
+                            return clientSecret;
+                        }
+                    }
                 });
 
                 // Style the component
