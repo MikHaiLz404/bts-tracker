@@ -77,8 +77,9 @@ async def create_chatkit_session(request: SessionRequest | None = None):
 
         print(f"Creating ChatKit session for workflow: {WORKFLOW_ID}, user: {user_id}")
 
-        # Create session with your workflow (following official docs pattern)
-        session = openai_client.chatkit.sessions.create(
+        # Create session with your workflow (using beta API)
+        # Note: Requires openai>=2.2.0
+        session = openai_client.beta.chatkit.sessions.create(
             workflow={"id": WORKFLOW_ID},
             user=user_id,
             # Optional: Add custom metadata
