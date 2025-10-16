@@ -82,8 +82,8 @@
     ></script>
 
     <script type="module">
-        const API_URL = 'https://bts-tracker.onrender.com/api/chatkit/session';
-        // For local development: const API_URL = 'http://localhost:10000/api/chatkit/session';
+        // Use relative URL - works for both local and production
+        const API_URL = '/api/chatkit/session';
 
         async function getClientSecret() {
             try {

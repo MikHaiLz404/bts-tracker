@@ -6,6 +6,8 @@ Your workflow ID: wf_68ede44222f88190a40adde9470d356c0357b9e0e6a723a9
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -35,6 +37,12 @@ class SessionRequest(BaseModel):
 
 
 @app.get("/")
+async def root():
+    """Serve the ChatKit frontend"""
+    return FileResponse("frontend/index_chatkit_hosted.html")
+
+
+@app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
@@ -42,10 +50,15 @@ async def health_check():
         "service": "BTS Train Assistant - OpenAI ChatKit",
         "workflow_id": WORKFLOW_ID,
         "endpoints": {
+            "chat": "/ (GET)",
             "session": "/api/chatkit/session (POST)",
-            "health": "/ (GET)"
+            "health": "/health (GET)"
         }
     }
+
+
+# Serve static files from frontend directory
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 
 @app.post("/api/chatkit/session")
