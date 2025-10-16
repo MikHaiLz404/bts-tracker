@@ -10,10 +10,10 @@ from postgres_store import PostgresStore
 
 class MyChatKitServer(ChatKitServer):
     """
-    BTS Tracker ChatKit Server with AI Agent integration.
+    BTS (Bangkok Mass Transit System) ChatKit Server with AI Agent integration.
 
-    This server uses the OpenAI Agents SDK to provide intelligent responses
-    with support for workflows, streaming, and tool calling.
+    This server helps users with BTS Skytrain queries including schedules,
+    routes, and real-time status information.
     """
 
     def __init__(self, store: PostgresStore):
@@ -25,7 +25,7 @@ class MyChatKitServer(ChatKitServer):
         instructions = self._get_instructions()
 
         self.agent = Agent(
-            name="BTS Tracker Assistant",
+            name="BTS Train Assistant",
             model=model,
             instructions=instructions,
         )
@@ -35,19 +35,30 @@ class MyChatKitServer(ChatKitServer):
 
     def _get_instructions(self) -> str:
         """
-        Define your agent's instructions here.
-        Customize this to match your BTS Tracker use case.
+        Define your agent's instructions for BTS train queries.
         """
-        return """You are a helpful AI assistant for the BTS Tracker system.
+        return """You are a helpful AI assistant for the BTS (Bangkok Mass Transit System) Skytrain in Bangkok, Thailand.
 
-Your role is to help users track and manage their BTS (Bug Tracking System) items.
-You can:
-- Answer questions about bugs, tasks, and issues
-- Help users search and filter their tracked items
-- Provide status updates and summaries
-- Assist with creating and updating tickets
+Your role is to help users with BTS train information and queries in these categories:
 
-Be concise, helpful, and professional in your responses."""
+1. **Schedule Queries** - Train timetables, operating hours, first/last train times
+2. **Route Planning** - How to travel between stations, transfers, directions, estimated travel time
+3. **Real-time Status** - Current train status, delays, service disruptions, platform information
+
+When users ask questions, you should:
+- Provide accurate, helpful information about BTS trains
+- Classify their question type (schedule_query, route_planning, or realtime_status)
+- Extract relevant details like station names, times, and directions
+- Be concise and friendly in your responses
+- If you don't have specific real-time data, acknowledge it and provide general guidance
+
+The BTS has two lines:
+- **Sukhumvit Line** (Light Green): Mo Chit to Kheha/Samrong
+- **Silom Line** (Dark Green): National Stadium to Bang Wa
+
+Operating hours: Approximately 5:30 AM - midnight daily (may vary by station)
+
+Be helpful, professional, and focused on transit information."""
 
     async def respond(
         self,

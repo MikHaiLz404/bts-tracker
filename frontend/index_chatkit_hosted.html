@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTS Train Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        #chatkit-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 600px;
+            overflow: hidden;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #64748b;
+        }
+
+        .error {
+            padding: 2rem;
+            text-align: center;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚇 BTS Train Assistant</h1>
+            <p class="subtitle">Ask about Bangkok Skytrain schedules, routes, and status</p>
+        </header>
+
+        <div id="chatkit-container">
+            <div class="loading">
+                <p>Loading ChatKit...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- OpenAI ChatKit SDK - Official CDN -->
+    <script
+        src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js"
+        async
+    ></script>
+
+    <script type="module">
+        const API_URL = 'https://bts-tracker.onrender.com/api/chatkit/session';
+        // For local development: const API_URL = 'http://localhost:10000/api/chatkit/session';
+
+        async function getClientSecret() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // Optional: pass user ID
+                    // body: JSON.stringify({ user_id: 'some-user-id' })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                return data.client_secret;
+
+            } catch (error) {
+                console.error('Error fetching client secret:', error);
+                throw error;
+            }
+        }
+
+        async function initializeChatKit() {
+            try {
+                console.log('Waiting for ChatKit SDK to load...');
+
+                // Wait for ChatKit SDK to be available
+                while (typeof window.OpenAI === 'undefined' || !window.OpenAI.ChatKit) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                console.log('ChatKit SDK loaded, fetching session...');
+
+                // Get client secret
+                const clientSecret = await getClientSecret();
+
+                console.log('Got client secret, initializing ChatKit UI...');
+
+                // Initialize ChatKit with the official API
+                const container = document.getElementById('chatkit-container');
+                container.innerHTML = ''; // Clear loading message
+
+                const chatkit = await window.OpenAI.ChatKit.create({
+                    clientSecret: clientSecret,
+                    container: container,
+                    // Optional: Add custom theme
+                    // theme: {
+                    //     primaryColor: '#2563eb',
+                    // }
+                });
+
+                console.log('ChatKit initialized successfully!');
+
+            } catch (error) {
+                console.error('Error initializing ChatKit:', error);
+                document.getElementById('chatkit-container').innerHTML = `
+                    <div class="error">
+                        <h2>Failed to load ChatKit</h2>
+                        <p>${error.message}</p>
+                        <p style="margin-top: 1rem;">
+                            Make sure:
+                            <ul style="text-align: left; margin-top: 0.5rem;">
+                                <li>Your server is running at ${API_URL}</li>
+                                <li>OPENAI_API_KEY is set in your environment</li>
+                                <li>Workflow ID is correct: wf_68ede44222f88190a40adde9470d356c0357b9e0e6a723a9</li>
+                            </ul>
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initializeChatKit);
+    </script>
+</body>
+</html>
