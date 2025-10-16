@@ -1,15 +1,20 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse, Response
+"""
+OpenAI Hosted ChatKit Server
+This is the simpler approach using OpenAI's Agent Builder workflow.
+Your workflow ID: wf_68ede44222f88190a40adde9470d356c0357b9e0e6a723a9
+"""
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from postgres_store import PostgresStore
-from my_server import MyChatKitServer  # import your custom server class
-from request_context import RequestContext
-from pydantic import ValidationError
-import json
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from openai import OpenAI
+import os
 
 app = FastAPI()
 
-# Add CORS middleware to allow frontend access
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, restrict this to your frontend domain
@@ -18,141 +23,85 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize store and server
-try:
-    print("Initializing PostgresStore...")
-    store = PostgresStore()
-    print("PostgresStore initialized successfully")
+# Initialize OpenAI client
+openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    print("Initializing MyChatKitServer...")
-    server = MyChatKitServer(store)
-    print("MyChatKitServer initialized successfully")
-except Exception as e:
-    print(f"FATAL ERROR during initialization: {e}")
-    import traceback
-    traceback.print_exc()
-    raise
+# Your Agent Builder workflow ID (BTS query classifier)
+WORKFLOW_ID = "wf_68ede44222f88190a40adde9470d356c0357b9e0e6a723a9"
+
+
+class SessionRequest(BaseModel):
+    """Optional: Add any custom parameters you need"""
+    user_id: str | None = None
+    metadata: dict | None = None
+
 
 @app.get("/")
+async def root():
+    """Serve the ChatKit frontend"""
+    return FileResponse("frontend/index_chatkit_hosted.html")
+
+
+@app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring and root access."""
+    """Health check endpoint"""
     return {
         "status": "ok",
-        "service": "BTS Tracker ChatKit Server",
+        "service": "BTS Train Assistant - OpenAI ChatKit",
+        "workflow_id": WORKFLOW_ID,
         "endpoints": {
-            "chatkit": "/chatkit (POST)",
-            "health": "/ (GET)"
+            "chat": "/ (GET)",
+            "session": "/api/chatkit/session (POST)",
+            "health": "/health (GET)"
         }
     }
 
-@app.post("/chatkit")
-async def chatkit_endpoint(request: Request):
-    print(f"=== Received ChatKit request ===")
+
+# Serve static files from frontend directory
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+
+@app.post("/api/chatkit/session")
+async def create_chatkit_session(request: SessionRequest | None = None):
+    """
+    Create a new ChatKit session for the frontend.
+    This endpoint is called by your frontend to initialize ChatKit UI.
+
+    Returns the client_secret that the frontend uses to connect to OpenAI's ChatKit server.
+
+    This follows the official OpenAI ChatKit documentation pattern.
+    """
     try:
-        # Get the raw body
-        body = await request.body()
+        # Generate a device/user ID (you can customize this based on your auth)
+        user_id = request.user_id if request and request.user_id else "default-user"
 
-        # Try to parse as JSON for better error messages
-        try:
-            request_json = json.loads(body)
+        print(f"Creating ChatKit session for workflow: {WORKFLOW_ID}, user: {user_id}")
 
-            # Check if 'type' field exists
-            if not isinstance(request_json, dict) or 'type' not in request_json:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "error": "Invalid request format",
-                        "message": "Request must be a JSON object with a 'type' field",
-                        "details": "Expected format: {\"type\": \"threads.create\", \"params\": {...}}",
-                        "valid_types": [
-                            "threads.create",
-                            "threads.add_user_message",
-                            "threads.add_client_tool_output",
-                            "threads.retry_after_item",
-                            "threads.custom_action",
-                            "threads.get_by_id",
-                            "threads.list",
-                            "items.list",
-                            "items.feedback",
-                            "attachments.create",
-                            "attachments.delete",
-                            "threads.update",
-                            "threads.delete"
-                        ],
-                        "note": "Use dots (.) not slashes (/) in type names"
-                    }
-                )
-        except json.JSONDecodeError:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "error": "Invalid JSON",
-                    "message": "Request body must be valid JSON"
-                }
-            )
-
-        # Create a request context
-        # For now, use a default user_id. In production, extract from auth headers
-        # You can get user_id from JWT token, session, or other auth mechanism
-        user_id = request.headers.get("X-User-ID", "default-user")
-        context = RequestContext(user_id=user_id)
-        print(f"Created context with user_id: {user_id}")
-
-        # Process the request through ChatKit server
-        print(f"Processing request through ChatKit server...")
-        result = await server.process(body, context)
-        print(f"Request processed successfully, result type: {type(result).__name__}")
-
-        # Handle streaming vs non-streaming responses
-        if hasattr(result, 'json_events'):
-            # Streaming response (threads.create, threads.add_user_message, etc.)
-            print("Returning streaming response")
-            return StreamingResponse(
-                result.json_events,
-                media_type="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "Connection": "keep-alive",
-                }
-            )
-        elif hasattr(result, 'json'):
-            # Non-streaming response (threads.list, threads.get_by_id, etc.)
-            print("Returning non-streaming response")
-            return Response(
-                content=result.json,
-                media_type="application/json"
-            )
-        else:
-            print(f"ERROR: Unknown result type: {type(result)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "error": "Internal server error",
-                    "message": f"Unknown result type: {type(result).__name__}"
-                }
-            )
-
-    except ValidationError as e:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Validation error",
-                "message": str(e),
-                "details": e.errors() if hasattr(e, 'errors') else None
-            }
+        # Create session with your workflow (following official docs pattern)
+        session = openai_client.chatkit.sessions.create(
+            workflow={"id": WORKFLOW_ID},
+            user=user_id,
+            # Optional: Add custom metadata
+            # metadata=request.metadata if request and request.metadata else {}
         )
+
+        print(f"Session created successfully")
+
+        # Return just the client_secret as per docs
+        return {
+            "client_secret": session.client_secret
+        }
+
     except Exception as e:
-        # Log the error (in production, use proper logging)
+        print(f"Error creating ChatKit session: {str(e)}")
         import traceback
-        error_trace = traceback.format_exc()
-        print(f"Error processing ChatKit request: {str(e)}")
-        print(f"Full traceback:\n{error_trace}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": "Internal server error",
-                "message": str(e),
-                "type": type(e).__name__,
-                "traceback": error_trace.split('\n')[-10:]  # Last 10 lines of traceback
-            }
-        )
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "type": type(e).__name__
+        }, 500
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
